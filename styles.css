@@ -1,8 +1,62 @@
-/*
+/* HighlightPop Plugin Styles */
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.highlightpop-wrapper {
+	display: inline;
+	position: relative;
+}
 
-If your plugin does not need CSS, delete this file.
+.highlightpop-rect {
+	display: inline;
+	padding: 2px 6px;
+	margin-right: 2px;
+	border-radius: 6px;
+	font-size: inherit;
+	font-weight: 600;
+	line-height: 1.8;
+	vertical-align: baseline;
+	white-space: nowrap;
+	-webkit-box-decoration-break: clone;
+	box-decoration-break: clone;
+}
 
-*/
+.highlightpop-text {
+	display: inline;
+	padding: 2px 6px;
+	border-radius: 6px;
+	font-size: inherit;
+	line-height: 1.8;
+	-webkit-box-decoration-break: clone;
+	box-decoration-break: clone;
+}
+
+.modal-description {
+	color: var(--text-muted);
+	margin-bottom: 10px;
+}
+
+.preset-button {
+	transition: all 0.2s ease;
+}
+
+.preset-button:hover {
+	transform: scale(1.05);
+	opacity: 0.9;
+}
+
+.rectangle-text-input {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	background: var(--background-primary);
+	color: var(--text-normal);
+}
+
+.rectangle-text-input:focus {
+	outline: none;
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 2px var(--interactive-accent-faded);
+}
+
+.settings-description {
+	color: var(--text-muted);
+	font-size: 0.9em;
+}

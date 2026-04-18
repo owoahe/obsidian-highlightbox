@@ -1,7 +1,7 @@
-import {App, Editor, MarkdownView, Modal, Notice, Plugin} from 'obsidian';
+import {App, Editor, MarkdownView, Notice, Plugin} from 'obsidian';
 import {DEFAULT_SETTINGS, MyPluginSettings, SampleSettingTab} from "./settings";
-
-// Remember to rename these classes and interfaces!
+import {ColorPickerModal, TextInputModal, ColorPickerResult, TextInputResult} from "./ui/modals";
+import {applyHighlight, hasSelection, removeHighlight} from "./highlight-engine";
 
 export default class MyPlugin extends Plugin {
 	settings: MyPluginSettings;
@@ -9,68 +9,145 @@ export default class MyPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		// This creates an icon in the left ribbon.
-		this.addRibbonIcon('dice', 'Sample', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status bar text');
-
-		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
-			id: 'open-modal-simple',
-			name: 'Open modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'replace-selected',
-			name: 'Replace selected content',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				editor.replaceSelection('Sample editor command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-modal-complex',
-			name: 'Open modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
+			id: 'highlight-text',
+			name: '高亮选中文本',
+			editorCallback: async (editor: Editor, view: MarkdownView) => {
+				if (!hasSelection(editor)) {
+					new Notice('请先选中文本');
+					return;
 				}
-				return false;
+				await this.highlightTextFlow(editor, view);
 			}
 		});
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			new Notice("Click");
+		this.addCommand({
+			id: 'remove-highlight',
+			name: '去除高亮',
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+				if (!hasSelection(editor)) {
+					new Notice('请先选中文本');
+					return;
+				}
+				const success = removeHighlight(editor);
+				if (success) {
+					new Notice('高亮已去除！');
+				} else {
+					new Notice('选中文本不是HighlightBox高亮');
+				}
+			}
 		});
 
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
+		this.addRibbonIcon('highlighter', '高亮文本', async (evt: MouseEvent) => {
+			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+			if (!view) {
+				new Notice('未找到活动编辑器');
+				return;
+			}
+			const editor = view.editor;
+			if (!hasSelection(editor)) {
+				new Notice('请先选中文本');
+				return;
+			}
+			await this.highlightTextFlow(editor, view);
+		});
 
+		this.addRibbonIcon('eraser', '去除高亮', (evt: MouseEvent) => {
+			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+			if (!view) {
+				new Notice('未找到活动编辑器');
+				return;
+			}
+			const editor = view.editor;
+			if (!hasSelection(editor)) {
+				new Notice('请先选中文本');
+				return;
+			}
+			const success = removeHighlight(editor);
+			if (success) {
+				new Notice('高亮已去除！');
+			} else {
+				new Notice('选中文本不是HighlightBox高亮');
+			}
+		});
+
+		this.registerEvent(
+			this.app.workspace.on('editor-menu', (menu, editor, view) => {
+				if (!hasSelection(editor)) {
+					return;
+				}
+
+				menu.addItem(item => {
+					item.setTitle('使用 HighlightBox 高亮')
+						.setIcon('highlighter')
+						.onClick(async () => {
+							await this.highlightTextFlow(editor, view as MarkdownView);
+						});
+				});
+
+				menu.addItem(item => {
+					item.setTitle('去除 HighlightBox 高亮')
+						.setIcon('eraser')
+						.onClick(() => {
+							const success = removeHighlight(editor);
+							if (success) {
+								new Notice('高亮已去除！');
+							} else {
+								new Notice('选中文本不是HighlightBox高亮');
+							}
+						});
+				});
+			})
+		);
+
+		this.addSettingTab(new SampleSettingTab(this.app, this));
 	}
 
-	onunload() {
+	async highlightTextFlow(editor: Editor, view: MarkdownView): Promise<void> {
+		const colorPickerModal = new ColorPickerModal(
+			this.app,
+			this.settings.colorPresets
+		);
+		const result: ColorPickerResult | null = await colorPickerModal.getResult();
+
+		if (!result) {
+			return;
+		}
+
+		const { preset, mode } = result;
+
+		if (mode === 'annotation') {
+			const textInputModal = new TextInputModal(this.app);
+			const textResult: TextInputResult | null = await textInputModal.getResult();
+
+			if (!textResult) {
+				return;
+			}
+
+			applyHighlight(
+				editor,
+				view,
+				preset.highlightColor,
+				preset.rectTextColor,
+				preset.textColor,
+				textResult.text,
+				textResult.position
+			);
+
+			new Notice('注释应用成功！');
+		} else {
+			applyHighlight(
+				editor,
+				view,
+				preset.highlightColor,
+				preset.textColor,
+				preset.textColor,
+				'',
+				'before'
+			);
+
+			new Notice('高亮应用成功！');
+		}
 	}
 
 	async loadSettings() {
@@ -82,18 +159,3 @@ export default class MyPlugin extends Plugin {
 	}
 }
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
-
-	onOpen() {
-		let {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
-}
