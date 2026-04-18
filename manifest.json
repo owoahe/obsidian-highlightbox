@@ -3,7 +3,7 @@
 	"name": "HighlightBox",
 	"version": "1.0.0",
 	"minAppVersion": "1.0.0",
-	"description": "Highlight text with customizable colors and display text in rounded rectangles",
+	"description": "Highlight text with customizable colors and display text in rounded rectangles.",
 	"author": "owoahe",
 	"authorUrl": "https://github.com/owoahe",
 	"isDesktopOnly": false
