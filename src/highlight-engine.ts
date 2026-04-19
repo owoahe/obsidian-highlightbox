@@ -7,6 +7,17 @@ export interface HighlightData {
 	originalText: string;
 }
 
+function escapeHtml(text: string): string {
+	const map: Record<string, string> = {
+		'&': '&amp;',
+		'<': '&lt;',
+		'>': '&gt;',
+		'"': '&quot;',
+		"'": '&#39;'
+	};
+	return text.replace(/[&<>"']/g, c => map[c] ?? c);
+}
+
 export function applyHighlight(
 	editor: Editor,
 	view: MarkdownView,
@@ -49,12 +60,6 @@ export function applyHighlight(
 	editor.replaceSelection(highlightHtml);
 }
 
-function escapeHtml(text: string): string {
-	const div = document.createElement('div');
-	div.textContent = text;
-	return div.innerHTML;
-}
-
 export function getSelectedText(editor: Editor): string {
 	return editor.getSelection();
 }
@@ -70,15 +75,10 @@ export function removeHighlight(editor: Editor): boolean {
 		return false;
 	}
 
-	const wrapper = document.createElement('div');
-	wrapper.innerHTML = selection;
+	const parser = new DOMParser();
+	const doc = parser.parseFromString(selection, 'text/html');
 
-	const highlightWrapper = wrapper.querySelector('.highlightpop-wrapper');
-	if (!highlightWrapper) {
-		return false;
-	}
-
-	const highlightText = wrapper.querySelector('.highlightpop-text');
+	const highlightText = doc.querySelector('.highlightpop-text');
 	if (!highlightText) {
 		return false;
 	}

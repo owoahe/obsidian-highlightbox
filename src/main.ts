@@ -1,20 +1,20 @@
-import {App, Editor, MarkdownView, Notice, Plugin} from 'obsidian';
-import {DEFAULT_SETTINGS, MyPluginSettings, SampleSettingTab} from "./settings";
+import {Editor, MarkdownView, Notice, Plugin} from 'obsidian';
+import {DEFAULT_SETTINGS, HighlightBoxSettings, HighlightBoxSettingTab} from "./settings";
 import {ColorPickerModal, TextInputModal, ColorPickerResult, TextInputResult} from "./ui/modals";
 import {applyHighlight, hasSelection, removeHighlight} from "./highlight-engine";
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+export default class HighlightBoxPlugin extends Plugin {
+	settings: HighlightBoxSettings;
 
 	async onload() {
 		await this.loadSettings();
 
 		this.addCommand({
 			id: 'highlight-text',
-			name: '高亮选中文本',
+			name: 'Highlight selected text',
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
 				if (!hasSelection(editor)) {
-					new Notice('请先选中文本');
+					new Notice('Please select text first');
 					return;
 				}
 				await this.highlightTextFlow(editor, view);
@@ -23,51 +23,51 @@ export default class MyPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'remove-highlight',
-			name: '去除高亮',
+			name: 'Remove highlight',
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				if (!hasSelection(editor)) {
-					new Notice('请先选中文本');
+					new Notice('Please select text first');
 					return;
 				}
 				const success = removeHighlight(editor);
 				if (success) {
-					new Notice('高亮已去除！');
+					new Notice('Highlight removed');
 				} else {
-					new Notice('选中文本不是HighlightBox高亮');
+					new Notice('Selected text is not a highlightbox highlight');
 				}
 			}
 		});
 
-		this.addRibbonIcon('highlighter', '高亮文本', async (evt: MouseEvent) => {
+		this.addRibbonIcon('highlighter', 'Highlight text', async (evt: MouseEvent) => {
 			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 			if (!view) {
-				new Notice('未找到活动编辑器');
+				new Notice('No active editor found');
 				return;
 			}
 			const editor = view.editor;
 			if (!hasSelection(editor)) {
-				new Notice('请先选中文本');
+				new Notice('Please select text first');
 				return;
 			}
 			await this.highlightTextFlow(editor, view);
 		});
 
-		this.addRibbonIcon('eraser', '去除高亮', (evt: MouseEvent) => {
+		this.addRibbonIcon('eraser', 'Remove highlight', (evt: MouseEvent) => {
 			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 			if (!view) {
-				new Notice('未找到活动编辑器');
+				new Notice('No active editor found');
 				return;
 			}
 			const editor = view.editor;
 			if (!hasSelection(editor)) {
-				new Notice('请先选中文本');
+				new Notice('Please select text first');
 				return;
 			}
 			const success = removeHighlight(editor);
 			if (success) {
-				new Notice('高亮已去除！');
+				new Notice('Highlight removed');
 			} else {
-				new Notice('选中文本不是HighlightBox高亮');
+				new Notice('Selected text is not a highlightbox highlight');
 			}
 		});
 
@@ -78,7 +78,7 @@ export default class MyPlugin extends Plugin {
 				}
 
 				menu.addItem(item => {
-					item.setTitle('使用 HighlightBox 高亮')
+					item.setTitle('Highlight with highlightbox')
 						.setIcon('highlighter')
 						.onClick(async () => {
 							await this.highlightTextFlow(editor, view as MarkdownView);
@@ -86,21 +86,21 @@ export default class MyPlugin extends Plugin {
 				});
 
 				menu.addItem(item => {
-					item.setTitle('去除 HighlightBox 高亮')
+					item.setTitle('Remove highlightbox highlight')
 						.setIcon('eraser')
 						.onClick(() => {
 							const success = removeHighlight(editor);
 							if (success) {
-								new Notice('高亮已去除！');
+								new Notice('Highlight removed');
 							} else {
-								new Notice('选中文本不是HighlightBox高亮');
+								new Notice('Selected text is not a highlightbox highlight');
 							}
 						});
 				});
 			})
 		);
 
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+		this.addSettingTab(new HighlightBoxSettingTab(this.app, this));
 	}
 
 	async highlightTextFlow(editor: Editor, view: MarkdownView): Promise<void> {
@@ -134,7 +134,7 @@ export default class MyPlugin extends Plugin {
 				textResult.position
 			);
 
-			new Notice('注释应用成功！');
+			new Notice('Annotation applied');
 		} else {
 			applyHighlight(
 				editor,
@@ -146,16 +146,15 @@ export default class MyPlugin extends Plugin {
 				'before'
 			);
 
-			new Notice('高亮应用成功！');
+			new Notice('Highlight applied');
 		}
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<MyPluginSettings>);
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<HighlightBoxSettings>);
 	}
 
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
 }
-
